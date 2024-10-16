@@ -1,5 +1,5 @@
 const express = require("express");
-const axios = require("axios"); // Missing import
+const axios = require("axios");
 const multer = require("multer");
 const FormData = require("form-data");
 const fs = require("fs");
@@ -16,6 +16,8 @@ const upload = multer({ dest: "/tmp/" });
 // Upload route
 app.post("/upload", upload.single("resume_file"), async (req, res) => {
   const { partner_key, secret_key, first_name, last_name, email } = req.body;
+  console.log("This is inside of the request from a custom endpoint");
+  console.log(partner_key, secret_key, first_name, last_name, email);
   const resumeFilePath = req.file.path;
 
   const formData = new FormData();
@@ -34,15 +36,24 @@ app.post("/upload", upload.single("resume_file"), async (req, res) => {
         headers: formData.getHeaders(),
       }
     );
+    console.log("This is inside of the talent endpoint");
+    console.log(response.data);
 
     res.status(200).json(response.data); // Send response from the API back to the client
   } catch (error) {
     console.error("Stevens Upload error:", error); // Inside your catch block
 
-    res.status(500).json({
-      message: "Error uploading resume",
-      error: error.response?.data || error.message,
-    });
+    if (error.response && error.response.status === 409) {
+      // If a 409 Conflict occurs (duplicate resume or email)
+      res.status(409).json({
+        message: "Duplicate detected: Resume or email already exists.",
+      });
+    } else {
+      res.status(500).json({
+        message: "Error uploading resume",
+        error: error.response?.data || error.message,
+      });
+    }
   } finally {
     // Clean up the file after upload
     fs.unlinkSync(resumeFilePath);
@@ -53,4 +64,3 @@ app.listen(3000, () => console.log("Server ready on port 3000."));
 
 // Export the app for serverless function handling
 module.exports = app;
-//test
