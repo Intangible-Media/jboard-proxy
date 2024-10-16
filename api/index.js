@@ -37,6 +37,8 @@ app.post("/upload", upload.single("resume_file"), async (req, res) => {
 
     res.status(200).json(response.data); // Send response from the API back to the client
   } catch (error) {
+    console.error("Stevens Upload error:", error); // Inside your catch block
+
     res.status(500).json({
       message: "Error uploading resume",
       error: error.response?.data || error.message,
