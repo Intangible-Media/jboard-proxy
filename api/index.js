@@ -1,11 +1,12 @@
 const express = require("express");
+const axios = require("axios"); // Missing import
 const multer = require("multer");
 const FormData = require("form-data");
 const fs = require("fs");
 const app = express();
 
 // Test route to check if the API is working
-app.get("/test", (req, res) => {
+app.get("/", (req, res) => {
   res.status(200).send("Working Successfully!");
 });
 
@@ -45,6 +46,8 @@ app.post("/upload", upload.single("resume_file"), async (req, res) => {
     fs.unlinkSync(resumeFilePath);
   }
 });
+
+app.listen(3000, () => console.log("Server ready on port 3000."));
 
 // Export the app for serverless function handling
 module.exports = app;
