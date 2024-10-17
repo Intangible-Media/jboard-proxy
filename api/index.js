@@ -4,7 +4,9 @@ const cors = require("cors");
 const multer = require("multer"); // Import Multer for handling file uploads
 const FormData = require("form-data");
 const fs = require("fs");
+const path = require("path");
 const app = express();
+const tmp = require("tmp"); // Temporary file storage
 
 // Enable CORS for all routes with explicit headers
 app.use((req, res, next) => {
@@ -28,27 +30,32 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Set up Multer to handle file uploads (store them in /tmp/ directory)
-const upload = multer({ dest: "/tmp/" });
+// Function to download file from URL
+async function downloadFile(url) {
+  const response = await axios({
+    method: "GET",
+    url: url,
+    responseType: "stream",
+  });
 
-// Test route to check if the API is working
-app.get("/", (req, res) => {
-  res.status(200).send("Working Successfully!");
-});
+  // Create a temporary file
+  const tempFile = tmp.fileSync();
+  const filePath = tempFile.name;
+
+  // Pipe the download stream to the temporary file
+  const writer = fs.createWriteStream(filePath);
+  response.data.pipe(writer);
+
+  return new Promise((resolve, reject) => {
+    writer.on("finish", () => resolve(filePath)); // Resolve with the file path
+    writer.on("error", reject); // Reject on error
+  });
+}
 
 // Upload route
-app.post("/upload", upload.single("resume_file"), async (req, res) => {
+app.post("/upload", async (req, res) => {
   const { partner_key, secret_key, first_name, last_name, email, resume_file } =
     req.body;
-
-  console.log("req.body");
-  console.log(req.body);
-
-  // const resumeFilePath = req.file?.path;
-
-  // if (!resumeFilePath) {
-  //   return res.status(400).json({ error: "Resume file is required" });
-  // }
 
   console.log("Incoming data:", {
     partner_key,
@@ -56,19 +63,27 @@ app.post("/upload", upload.single("resume_file"), async (req, res) => {
     first_name,
     last_name,
     email,
-    resume_file: resume_file,
+    resume_file,
   });
 
-  // Prepare form data for sending the file to Talent Inc.
-  const formData = new FormData();
-  formData.append("partner_key", partner_key);
-  formData.append("secret_key", secret_key);
-  formData.append("first_name", first_name);
-  formData.append("last_name", last_name);
-  formData.append("email", email);
-  formData.append("resume_file", fs.createReadStream(resume_file)); // Upload binary file
+  if (!resume_file) {
+    return res.status(400).json({ error: "Resume file URL is required" });
+  }
 
   try {
+    // Download the file from the provided URL
+    const downloadedFilePath = await downloadFile(resume_file);
+
+    // Prepare form data for sending the binary file to Talent Inc.
+    const formData = new FormData();
+    formData.append("partner_key", partner_key);
+    formData.append("secret_key", secret_key);
+    formData.append("first_name", first_name);
+    formData.append("last_name", last_name);
+    formData.append("email", email);
+    formData.append("resume_file", fs.createReadStream(downloadedFilePath)); // Upload the binary file
+
+    // Make the request to the Talent Inc API
     const response = await axios.post(
       "https://api.talentinc.com/v1/resume",
       formData,
@@ -81,6 +96,9 @@ app.post("/upload", upload.single("resume_file"), async (req, res) => {
 
     console.log("Response from Talent Inc API:", response.data);
     res.status(200).json(response.data);
+
+    // Clean up the temporary file after the upload
+    fs.unlinkSync(downloadedFilePath);
   } catch (error) {
     console.error("Error uploading resume:", error);
 
@@ -94,8 +112,6 @@ app.post("/upload", upload.single("resume_file"), async (req, res) => {
         error: error.response?.data || error.message,
       });
     }
-  } finally {
-    fs.unlinkSync(resume_file); // Clean up the file after the upload
   }
 });
 
