@@ -32,6 +32,9 @@ app.get("/", (req, res) => {
 
 // Upload route
 app.post("/upload", async (req, res) => {
+  console.log("=============================================");
+  console.log(req.body);
+  console.log("=============================================");
   const { partner_key, secret_key, first_name, last_name, email, resume_file } =
     req.body;
 
