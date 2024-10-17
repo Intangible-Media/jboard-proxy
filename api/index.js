@@ -6,7 +6,18 @@ const fs = require("fs");
 const cors = require("cors"); // Import cors
 const app = express();
 
-// Enable CORS for all routes
+// Manually add CORS headers for all routes
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://www.medspajobs.com"); // Allow requests from your frontend
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  next();
+});
+
+// Enable CORS for all routes as backup (optional)
 app.use(
   cors({
     origin: "https://www.medspajobs.com", // Allow requests from your frontend
