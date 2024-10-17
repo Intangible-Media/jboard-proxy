@@ -7,7 +7,11 @@ const cors = require("cors"); // Import cors
 const app = express();
 
 // Enable CORS for all routes
-app.use(cors()); // Use CORS middleware
+app.use(
+  cors({
+    origin: "https://www.medspajobs.com", // Allow requests from your frontend
+  })
+);
 
 // Test route to check if the API is working
 app.get("/", (req, res) => {
