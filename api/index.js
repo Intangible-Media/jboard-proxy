@@ -3,7 +3,11 @@ const axios = require("axios");
 const multer = require("multer");
 const FormData = require("form-data");
 const fs = require("fs");
+const cors = require("cors"); // Import cors
 const app = express();
+
+// Enable CORS for all routes
+app.use(cors()); // Use CORS middleware
 
 // Test route to check if the API is working
 app.get("/", (req, res) => {
